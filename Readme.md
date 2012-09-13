@@ -164,8 +164,8 @@ Chute provides a simple upload flow that provides image processing and more.
 ```php
 // info about files
 $files = array(
-  array('filename' => 'image.jpg', 'size' => 124235, 'md5' => '0cc175b9c0f1b6a831c399e269772661')
-  // second file etc.
+  array('filename' => 'image.jpg', 'size' => filesize('image.jpg'), 'md5' => md5_file('image.jpg'))
+  // , second file etc.
 );
 // ID(s) of chute(s) to which you want to upload the image(s)
 $chutes = array(12423523);
