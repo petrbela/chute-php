@@ -9,11 +9,6 @@
 require_once(dirname(__FILE__) . '/../lib/guzzle.phar');
 use \Guzzle\Service\Client;
 
-# Methods for asset URLs
-//String::width = (width) -> "#{ @ }/w/#{ width }"
-//String::height = (height) -> "#{ @ }/h/#{ height }"
-//String::fit = (width, height) -> "#{ @ }/fit/#{ width }x#{ height }"
-//String::fill = (width, height) -> "#{ @ }/#{ width }x#{ height }"
 
 /**
  * Main class, client
@@ -74,11 +69,11 @@ class Bundles {
 
 	/** creating bundle of existing assets */
 	public function create($options) {
-        $body = array('asset_ids' => $options['ids']);
+        $body = "asset_ids=".json_encode($options['ids']); //array('asset_ids' => $options['ids']);
 		$response = $this->chute->client->post("v1/bundles", null, $body)->send();
 
 		switch ($response->getStatusCode()) {
-            case 201: return $response->getBody(true); break;
+            case 201: return json_decode($response->getBody(true)); break;
 			case 401: throw new Exception('invalid access token'); break;
 			default: throw new Exception(json_encode(json_decode($response->getBody(true))->error));
         }
@@ -101,7 +96,7 @@ class Bundles {
         $response = $this->chute->client->delete("v1/bundles/$id")->send();
 
 		switch ($response->getStatusCode()) {
-            case 200: return array(); break;
+            case 200: return true; break;
             case 401: throw new Exception('invalid access token'); break;
             default: throw new Exception(json_encode(json_decode($response->getBody(true))->error));
         }
@@ -117,7 +112,7 @@ class Assets {
     }
 
     /** finding assets, options should be { id: 125235|'asfsdgdfg', chuteId: 2352435|'hrdgfdh', comments: yes|no } */
-	function find($options) {
+	public function find($options) {
         $id = $options['id'] ? $options['id'] : $options['shortcut'];
         $response = $this->chute->client->get("v1/assets/$id")->send();
 
@@ -131,7 +126,7 @@ class Assets {
                 $comments = $this->chute->client->get("v1/chutes/$chuteId/assets/$id/comments")->send();
                 switch ($comments->getStatusCode()) {
                     case 200:
-                        $asset['comments'] = json_decode($comments->getBody(true))->data;
+                        $asset->comments = json_decode($comments->getBody(true))->data;
                         return $asset; break;
                     case 401: throw new Exception('invalid access token'); break;
                     default: throw new Exception($comments->getBody(true)->error);
@@ -189,32 +184,31 @@ class Uploads {
 
 	function request($options) {
         $body = array('files' => $options['files'], 'chutes' => $options['chutes']);
-		$response = $this->chute->client->post("v2/uploads", null, $body)->send();
+		$response = $this->chute->client->post("v2/uploads", null, json_encode($body))->send();
 
         if ($response->getStatusCode() != 200) throw new Exception($response->getStatusCode());
         return json_decode($response->getBody(true))->data;
     }
 
-	function complete($options) {
-		$id = $options['id'] ? $options['id'] : $options;
-		$response = $this->chute->client->post("v2/uploads/$id/complete")->send();
+	function complete($uploadId) {
+		$response = $this->chute->client->post("v2/uploads/$uploadId/complete")->send();
 
-		if ($response->hasErrors()) throw new Exception($response->getStatusCode());
-        return array();
+		if ($response->getStatusCode() != 200) throw new Exception($response->getStatusCode());
+        return true;
     }
 
 	/** generating token for an upload */
 	public function upload($options) {
-        $request = $this->request($options);
+        $upload = $this->request($options);
 		$assetIds = array(); // pushing asset ids
 		$assetShortcuts = array(); // pushing asset shortcuts and returning all those at the end
 
-		foreach ($request->existing_assets as $asset) {
+		foreach ($upload->existing_assets as $asset) {
 			$assetIds[] = $asset->id;
 			$assetShortcuts[] = $asset->shortcut;
         }
 
-		foreach ($request->new_assets as $asset) {
+		foreach ($upload->new_assets as $asset) {
             $assetIds[] = $asset->id;
             $assetShortcuts[] = $asset->shortcut;
 
@@ -227,10 +221,8 @@ class Uploads {
             ), $file)->send();
         }
 
-		$complete = $this->complete(array('id' => $request->id));
-
-        if ($complete->has_errors()) throw new Exception($complete->getStatusCode());
-        return array('ids' => $assetIds, 'shortcuts' => $assetShortcuts);
+		if ($this->complete($upload->id))
+            return array('ids' => $assetIds, 'shortcuts' => $assetShortcuts);
     }
 }
 
@@ -331,7 +323,9 @@ class Chutes {
                 $data["chute[$key]"] = $value;
         }
 
-        $response = $this->chute->client->put("v1/chutes/$id", null, "chute[name%5D]={$options['name']}")->send();
+        $response = $this->chute->client->put("v1/chutes/$id")->setBody("chute[name]={$options['name']}");
+        var_dump($response);
+        $response = $response->send();
 
         switch ($response->getStatusCode()) {
             case 200: return json_decode($response->getBody(true))->data; break;

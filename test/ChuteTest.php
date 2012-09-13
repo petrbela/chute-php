@@ -2,12 +2,12 @@
 
 require_once('simpletest/autorun.php');
 
-require_once('../src/chute.php');
+require_once(dirname(__FILE__) . '/../src/chute.php');
 
 class ChuteTest extends UnitTestCase {
 
     private $client;
-    private $chuteId;
+    private $assetId, $bundleId, $chuteId;
     private $testImage;
 
     function ChuteTest() {
@@ -17,7 +17,7 @@ class ChuteTest extends UnitTestCase {
             'token' => '2e37243432110c4155283df0685a4f08f80c157815a858cdeedc6f9cd19c7496',
             'id' => '5050dc193f59d821a600004c'
         ));
-        $this->testImage = '/Users/petrbela/Desktop/stevejobs.png'; // put some test image here
+        $this->testImage = '/Users/petrbela/Desktop/stevejobs.jpg'; // put some test image here
         ////////////////
     }
 
@@ -102,68 +102,113 @@ class ChuteTest extends UnitTestCase {
         //do done
     }
 
+
     //describe 'Uploads', ->
     //
     //it 'should upload file', (done) ->
     function testUploadFile() {
         $chute = $this->client->chutes->create(array('name' => 'Beach'));
+        $this->chuteId = $chute->id;
         //before (done) ->
         //client.chutes.create name: 'Beach', (err, chute) ->
         //chuteId = chute.id
         //do done
 
+        $this->assertTrue(file_exists($this->testImage));
         $assets = $this->client->uploads->upload(array('chutes' => array($chute->id), 'files' => array(array(
             'filename' => $this->testImage,
             'size' => filesize($this->testImage),
-            'md5' => filesize($this->testImage)
+            'md5' => md5_file($this->testImage)
         ))));
         $this->assertTrue(sizeof($assets) > 0);
+        $this->assertNotNull($assets['ids'][0]);
+        $this->assetId = $assets['ids'][0];
         //client.uploads.upload files: [{ filename: testImage, size: fs.statSync(testImage).size, md5: require('crypto').createHash('md5').update(fs.readFileSync(testImage, 'utf-8')).digest('hex') }], chutes: [chuteId], (err, assets) ->
         //assetId = assets.ids[0]
         //do done
     }
 
-    //describe 'Bundles', ->
-    //it 'should create a bundle', (done) ->
-    //client.bundles.create ids: [assetId], (err, bundle) ->
-    //bundleId = bundle.id
-    //err.should.equal(no) and bundle.id.should.be.above(0)
-    //do done
-    //
-    //it 'should find a bundle', (done) ->
-    //client.bundles.find id: bundleId, (err, bundle) ->
-    //err.should.equal(no)
-    //do done
-    //
-    //it 'should remove bundle', (done) ->
-    //client.bundles.remove id: bundleId, (err) ->
-    //err.should.equal(no)
-    //do done
-    //
-    //describe 'Assets', ->
-    //it 'should find an asset', (done) ->
-    //client.assets.find id: assetId, (err, asset) ->
-    //err.should.equal(no) and asset.id.should.equal(assetId)
-    //do done
-    //
-    //it 'should find an asset with comments inside', (done) ->
-    //client.assets.find chuteId: chuteId, id: assetId, comments: yes, (err, asset) ->
-    //err.should.equal(no) and asset.comments.length.should.equal(0)
-    //do done
-    //
-    //it 'should heart an asset', (done) ->
-    //client.assets.heart id: assetId, (err) ->
-    //err.should.equal(no)
-    //do done
-    //
-    //it 'should unheart an asset', (done) ->
-    //client.assets.unheart id: assetId, (err) ->
-    //err.should.equal(no)
-    //do done
-    //
-    //it 'should remove asset', (done) ->
-    //client.assets.remove id: assetId, (err) ->
-    //err.should.equal(no)
-    //do done
 
+    //describe 'Bundles', ->
+    //
+    //it 'should create a bundle', (done) ->
+    function testCreateBundle() {
+        $bundle = $this->client->bundles->create(array('ids' => array($this->assetId)));
+        $this->assertNotNull($bundle);
+        $this->assertTrue($bundle->id > 0);
+        $this->bundleId = $bundle->id;
+        //client.bundles.create ids: [assetId], (err, bundle) ->
+        //bundleId = bundle.id
+        //err.should.equal(no) and bundle.id.should.be.above(0)
+        //do done
+    }
+
+    //it 'should find a bundle', (done) ->
+    function testFindBundle() {
+        $bundle = $this->client->bundles->find(array('id' => $this->bundleId));
+        $this->assertNotNull($bundle);
+        $this->assertEqual($this->bundleId, $bundle->id);
+        //client.bundles.find id: bundleId, (err, bundle) ->
+        //err.should.equal(no)
+        //do done
+    }
+
+    //it 'should remove bundle', (done) ->
+    function testRemoveBundle() {
+        $result = $this->client->bundles->remove(array('id' => $this->bundleId));
+        $this->assertTrue($result);
+        //client.bundles.remove id: bundleId, (err) ->
+        //err.should.equal(no)
+        //do done
+    }
+
+
+    //describe 'Assets', ->
+    //
+    //it 'should find an asset', (done) ->
+    function testFindAsset() {
+        $asset = $this->client->assets->find(array('id' => $this->assetId));
+        $this->assertNotNull($asset);
+        $this->assertEqual($this->assetId, $asset->id);
+        //client.assets.find id: assetId, (err, asset) ->
+        //err.should.equal(no) and asset.id.should.equal(assetId)
+        //do done
+    }
+
+    //it 'should find an asset with comments inside', (done) ->
+    function testFindAssetWithComments() {
+        $asset = $this->client->assets->find(array('chuteId' => $this->chuteId, 'id' => $this->assetId, 'comments' => true));
+        $this->assertNotNull($asset);
+        $this->assertEqual(0, sizeof($asset->comments));
+        //client.assets.find chuteId: chuteId, id: assetId, comments: yes, (err, asset) ->
+        //err.should.equal(no) and asset.comments.length.should.equal(0)
+        //do done
+    }
+
+    //it 'should heart an asset', (done) ->
+    function testHeartAsset() {
+        $result = $this->client->assets->heart(array('id' => $this->assetId));
+        $this->assertTrue($result);
+        //client.assets.heart id: assetId, (err) ->
+        //err.should.equal(no)
+        //do done
+    }
+
+    //it 'should unheart an asset', (done) ->
+    function testUnheartAsset() {
+        $result = $this->client->assets->unheart(array('id' => $this->assetId));
+        $this->assertTrue($result);
+        //client.assets.unheart id: assetId, (err) ->
+        //err.should.equal(no)
+        //do done
+    }
+
+    //it 'should remove asset', (done) ->
+    function testRemoveAsset() {
+        $result = $this->client->assets->remove(array('id' => $this->assetId));
+        $this->assertTrue($result);
+        //client.assets.remove id: assetId, (err) ->
+        //err.should.equal(no)
+        //do done
+    }
 }
