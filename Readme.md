@@ -48,7 +48,7 @@ $chute = $client->chutes->find(array('id' => 12345, 'contributors' => true));
 echo $chute->contributors;
 
 // find chute with ID=12345 with members list inside
-$chute = $client->chute->find(array('id' => 12345, 'members' => true));
+$chute = $client->chutes->find(array('id' => 12345, 'members' => true));
 echo $chute->members;
 
 // find chute with ID=12345 with parcels list inside
@@ -106,11 +106,11 @@ Customize:
 
 ```php
 $asset = $client->assets->find(array('id' => 12345));
-asset->url // http://media.getchute.com/media/$id
-asset->url."/w/640" // http://media.getchute.com/media/$id/w/640
-asset->url."/h/480" // http://media.getchute.com/media/$id/h/480
-asset->url."/640x480" // http://media.getchute.com/media/$id/640x480
-asset->url."/fit/640x480" // http://media.getchute.com/media/$id/fit/640x480
+$asset->url // http://media.getchute.com/media/$id
+$asset->url."/w/640" // http://media.getchute.com/media/$id/w/640
+$asset->url."/h/480" // http://media.getchute.com/media/$id/h/480
+$asset->url."/640x480" // http://media.getchute.com/media/$id/640x480
+$asset->url."/fit/640x480" // http://media.getchute.com/media/$id/fit/640x480
 ```
 
 Like:
@@ -171,7 +171,8 @@ $files = array(
 $chutes = array(12423523);
 
 $assets = $client->uploads->upload(array('files' => $files, 'chutes' => $chutes));
-// $assets is an array of asset IDs which were just uploaded
+// $assets is an array of asset IDs/shortcuts which were just uploaded
+// $assets = array('ids' => array([asset1_id, asset2_id]), 'shortcuts' => array([asset1_shortcut, asset2_shortcut]))
 ```
 
 # Tests
